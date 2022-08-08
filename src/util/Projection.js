@@ -35,40 +35,52 @@ Ext.define('BasiGX.util.Projection', {
                     ' provided.');
             }
             var epsgPromises = [];
-            var epsgIoBaseUrl = '//epsg.io/?q={0}&format=json';
+            var epsgIoBaseUrl = 'https://epsg.io/?q={0}&format=json';
             Ext.each(Ext.Array.unique(epsgCodeArray), function(epsgCodeStr) {
-                var epsgCode = epsgCodeStr.toUpperCase().replace('EPSG:', '');
-                var epsgPromise = new Ext.Promise(function(resolve, reject) {
-                    var epsgUrl = Ext.String.format(epsgIoBaseUrl, epsgCode);
-                    Ext.Ajax.request({
-                        url: epsgUrl,
-                        useDefaultXhrHeader: false,
-                        success: function(response) {
-                            if (response && response.responseText &&
-                                response.status === 200) {
-                                var resultObj = Ext.decode(response.
-                                    responseText);
-                                resolve(resultObj.results[0]);
-                            } else {
+                debugger;
+                var epsgPromise;
+                if(proj4.defs[epsgCodeStr.toUpperCase()]){
+                    // the projection is already available, no need to request a definition
+                    //return true;
+                    epsgPromise = new Ext.Promise(function(resolve){
+                        resolve(proj4.defs[epsgCodeStr.toUpperCase()]);
+                    });
+                }
+                else{
+                    var epsgCode = epsgCodeStr.topperCase().replace('EPSG:', '');
+                    epsgPromise = new Ext.Promise(function(resolve, reject) {
+                        var epsgUrl = Ext.String.format(epsgIoBaseUrl, epsgCode);
+                        Ext.Ajax.request({
+                            url: epsgUrl,
+                            useDefaultXhrHeader: false,
+                            success: function(response) {
+                                if (response && response.responseText &&
+                                    response.status === 200) {
+                                    var resultObj = Ext.decode(response.
+                                        responseText);
+                                    debugger;
+                                    resolve(resultObj.results[0]);
+                                } else {
+                                    reject(response.status);
+                                }
+                            },
+                            failure: function(response) {
                                 reject(response.status);
                             }
-                        },
-                        failure: function(response) {
-                            reject(response.status);
-                        }
-                    });
+                        });
 
-                });
+                    });
+                }
                 epsgPromises.push(epsgPromise);
             });
-
+            debugger;
             return Ext.Promise.all(epsgPromises);
         },
 
         /**
          * Register crs definitions
          * @param {Object[]} proj4jObjects An array of objects returned by
-         * http://epsg.io which includes information on projection, in
+         * https://epsg.io which includes information on projection, in
          * particular the name, the unit and the proj4 definition
          */
         initProj4Definitions: function(proj4jObjects) {
